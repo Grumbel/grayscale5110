@@ -25,42 +25,31 @@ import random
 from PIL import Image
 
 
-def zzip(lst):
-    p = len(lst) // 2
-    l1 = lst[0:p]
-    l2 = reversed(lst[p:])
-    result = []
-    for z in itertools.zip_longest(l1, l2):
-        if z[0] is not None: result.append(z[0])
-        if z[1] is not None: result.append(z[1])
-    return result
-
-
 def make_thresholds(n):
-    t = [i * 255 // (n+1) for i in range(1, (n+1))]
-    result = []
-    for i in range(n):
-        result.append(t)
-        t = [t[-1]] + t[0:-1]
-
-    result = [zzip(r) for r in result]
-    return result
+    return [i * 255 // (n+1) for i in range(1, (n+1))]
 
 
 def img2data(img, levels):
     data = []
-    thresholdss = make_thresholds(levels - 1)
-    # random.shuffle(thresholdss)
-    for thresholds in thresholdss:
+    thresholds = make_thresholds(levels - 1)
+
+    zipdata = []
+    for y in range(0, 48):
+        for x in range(0, 84):
+            p = img.getpixel((x, y))
+            l = [(1 if (p > t) else 0)
+                 for t in thresholds]
+            # random.shuffle(l)
+            zipdata.append(l)
+
+    data = []
+    for t in range(len(thresholds)):
         for x in range(0, 84):
             for y in range(0, 6):
-                value = 0
+                p = 0
                 for b in range(0, 8):
-                    p = img.getpixel((x, y * 8 + b))
-                    threshold = thresholds[((y * 8 + b)*2 + x*3) % len(thresholds)] # [(b*1+x*4) % len(thresholdss)]
-                    # threshold = thresholds[random.randint(0, len(thresholdss)-1)]
-                    value |= (1 if (p > threshold) else 0) << b
-                data.append(value)
+                    p |= (zipdata[((y*8+b) * 84) + x][(x*5 + 3*(y*8+b)*48 + t) % len(thresholds)]) << b
+                data.append(p)
     return data
 
 
@@ -85,7 +74,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Convert image to raw bitmap data')
     parser.add_argument('FILE', action='store', type=str, nargs=1,
                         help='image file to load')
-    parser.add_argument('-l', '--levels', metavar="NUM", type=int, default=12,
+    parser.add_argument('-l', '--levels', metavar="NUM", type=int, default=16,
                         help='Number of levels of grayscale to use')
     parser.add_argument('-f', '--format', metavar="FMT", type=str, default="raw",
                         help='Output format (raw, C)')
