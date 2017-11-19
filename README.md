@@ -2,7 +2,7 @@ Grayscale5110
 =============
 
 This Arduino code demonstrates how to produce grayscale images on a
-monochrome Nokia5110 display. The Arduino code assumes a ESP8220
+monochrome Nokia5110 display. The Arduino code assumes a ESP8266
 microcontroller.
 
 
