@@ -18,7 +18,7 @@
 
 #include <ESP8266WiFi.h>
 
-#include "password.hpp"
+#include "secrets.hpp"
 
 WiFiServer server(8080);
 
@@ -90,8 +90,11 @@ void setup()
   server.begin();
 }
 
-byte g_bitmap[504 * 32];
-size_t g_bitmap_len = 0;
+byte g_bitmap[504 * 32] =
+#include "ready.hpp"
+  ;
+
+size_t g_bitmap_len = 5544;
 
 void send_bitmap()
 {
