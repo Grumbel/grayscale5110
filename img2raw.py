@@ -17,6 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import re
 import sys
 import random
 import itertools
@@ -59,7 +60,7 @@ def quantize(img, levels, floydsteinberg):
     return out
 
 
-def img2data(img, levels, dither):
+def img2data(img, levels, dither, magic):
     img = quantize(img, levels, floydsteinberg=dither)
 
     levels = levels - 1
@@ -77,7 +78,8 @@ def img2data(img, levels, dither):
                 v = 0
                 for b in range(0, 8):
                     p = zipdata[((y*8+b) * 84) + x]
-                    v |= (p[(x*3 + 1*(y*8+b) + l) % levels]) << b
+                    v |= (p[int(magic[0] * x + magic[1] * (y*8+b) + l) % levels]) << b
+
                     # Moire pattern
                     # v |= (p[int(x * (y*8+b) + l) % levels]) << b
 
@@ -103,6 +105,13 @@ def img2grayscale(img, rotate):
     return img.convert("L")
 
 
+def MagicValue(text):
+    m = re.match(r"(\d+),(\d+)", text)
+    if m is None:
+        raise argparse.ArgumentTypeError("invalid format for --magic: '{}', expected \"X,Y\"".format(args.format))
+    else:
+        return (int(m.group(1)), int(m.group(2)))
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Convert image to raw bitmap data')
     parser.add_argument('FILE', action='store', type=str, nargs=1,
@@ -115,15 +124,26 @@ def parse_args():
                         help='Rotate output by ANGLE')
     parser.add_argument('-d', '--dither', action='store_true', default=False,
                         help='Use Floyd-Steinberg dithering')
+    parser.add_argument('-m', '--magic', metavar="X,Y", type=MagicValue, default=None,
+                        help='Magic values to determine the flicker pattern')
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
+    if args.magic is None:
+        if args.levels > 9:
+            magic = (5, 3)
+        else:
+            magic = (1, 1)
+    else:
+        magic = args.magic
+
     img = Image.open(args.FILE[0])
     img = img2grayscale(img, args.rotate)
-    data = img2data(img, args.levels, args.dither)
+
+    data = img2data(img, args.levels, args.dither, magic)
 
     if args.format == "raw":
         sys.stdout.buffer.write(bytes(data))
