@@ -34,13 +34,20 @@ def img2data(img, levels):
     thresholds = make_thresholds(levels - 1)
 
     zipdata = []
+    imgs = []
+    for threshold in thresholds:
+        out = Image.new("L", size=img.size)
+        for y in range(img.size[1]):
+            for x in range(img.size[0]):
+                p = img.getpixel((x, y))
+                out.putpixel((x, y), p - 128 + threshold)
+        out = out.convert(mode="1", dither=Image.NONE) # FLOYDSTEINBERG)
+        imgs.append(out)
+
     for y in range(0, 48):
         for x in range(0, 84):
-            p = img.getpixel((x, y))
-            l = [(1 if (p > t) else 0)
-                 for t in thresholds]
-            # random.shuffle(l)
-            zipdata.append(l)
+            zipdata.append([0 if out.getpixel((x, y)) <= 128 else 1
+                            for out in imgs])
 
     data = []
     for t in range(len(thresholds)):
@@ -49,6 +56,7 @@ def img2data(img, levels):
                 p = 0
                 for b in range(0, 8):
                     p |= (zipdata[((y*8+b) * 84) + x][(x*5 + 3*(y*8+b)*48 + t) % len(thresholds)]) << b
+                    # p |= (zipdata[((y*8+b) * 84) + x][(x*0 + 0*(y*8+b)*48 + t) % len(thresholds)]) << b
                 data.append(p)
     return data
 
