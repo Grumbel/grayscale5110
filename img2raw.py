@@ -22,42 +22,64 @@ import random
 import itertools
 import argparse
 import random
+import numpy
+import math
 from PIL import Image
 
 
-def make_thresholds(n):
-    return [i * 255 // (n+1) for i in range(1, (n+1))]
+def quantize(img, levels, floydsteinberg):
+    """Takes a grayscale image and reduces it's number of colors to
+    'levels'. Resulting pixel are in [0, levels), not [0, 256)."""
+    q = 255 / levels
+
+    pixels = numpy.zeros([img.size[0] + 2, img.size[1] + 2])
+    for y in range(img.size[1]):
+        for x in range(img.size[0]):
+            p = img.getpixel((x, y))
+            pixels[x+1][y+1] = p
+
+    for y in range(1, pixels.shape[1] - 1):
+        for x in range(1, pixels.shape[0] - 1):
+            oldpixel = pixels[x, y]
+            newpixel = math.floor(oldpixel / q)
+            pixels[x][y] = newpixel
+            if floydsteinberg:
+                quant_error = oldpixel - (newpixel * q)
+                pixels[x+1][y  ] += quant_error * 7/16
+                pixels[x-1][y+1] += quant_error * 3/16
+                pixels[x  ][y+1] += quant_error * 5/16
+                pixels[x+1][y+1] += quant_error * 1/16
+
+    out = Image.new("L", img.size)
+    for y in range(img.size[1]):
+        for x in range(img.size[0]):
+            p = pixels[x+1][y+1]
+            out.putpixel((x, y), int(p))
+
+    return out
 
 
-def img2data(img, levels):
-    data = []
-    thresholds = make_thresholds(levels - 1)
+def img2data(img, levels, dither):
+    img = quantize(img, levels, floydsteinberg=dither)
+
+    levels = levels - 1
 
     zipdata = []
-    imgs = []
-    for threshold in thresholds:
-        out = Image.new("L", size=img.size)
-        for y in range(img.size[1]):
-            for x in range(img.size[0]):
-                p = img.getpixel((x, y))
-                out.putpixel((x, y), p - 128 + threshold)
-        out = out.convert(mode="1", dither=Image.NONE) # FLOYDSTEINBERG)
-        imgs.append(out)
-
     for y in range(0, 48):
         for x in range(0, 84):
-            zipdata.append([0 if out.getpixel((x, y)) <= 128 else 1
-                            for out in imgs])
+            p = img.getpixel((x, y))
+            zipdata.append(([0] * (levels - p)) + ([1] * p))
 
     data = []
-    for t in range(len(thresholds)):
+    for l in range(levels):
         for x in range(0, 84):
             for y in range(0, 6):
-                p = 0
+                v = 0
                 for b in range(0, 8):
-                    p |= (zipdata[((y*8+b) * 84) + x][(x*5 + 3*(y*8+b)*48 + t) % len(thresholds)]) << b
-                    # p |= (zipdata[((y*8+b) * 84) + x][(x*0 + 0*(y*8+b)*48 + t) % len(thresholds)]) << b
-                data.append(p)
+                    p = zipdata[((y*8+b) * 84) + x]
+                    v |= (p[(x*3 + 1*(y*8+b) + l) % levels]) << b
+                    # v |= (p[(x*5 + 3*(y*8+b)*48 + l) % levels]) << b
+                data.append(v)
     return data
 
 
@@ -88,6 +110,8 @@ def parse_args():
                         help='Output format (raw, C)')
     parser.add_argument('-r', '--rotate', metavar="ANGLE", type=int, default=0,
                         help='Rotate output by ANGLE')
+    parser.add_argument('-d', '--dither', action='store_true', default=False,
+                        help='Use Floyd-Steinberg dithering')
     return parser.parse_args()
 
 
@@ -96,7 +120,7 @@ def main():
 
     img = Image.open(args.FILE[0])
     img = img2grayscale(img, args.rotate)
-    data = img2data(img, args.levels)
+    data = img2data(img, args.levels, args.dither)
 
     if args.format == "raw":
         sys.stdout.buffer.write(bytes(data))
