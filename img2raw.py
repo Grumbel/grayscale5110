@@ -78,6 +78,9 @@ def img2data(img, levels, dither):
                 for b in range(0, 8):
                     p = zipdata[((y*8+b) * 84) + x]
                     v |= (p[(x*3 + 1*(y*8+b) + l) % levels]) << b
+                    # Moire pattern
+                    # v |= (p[int(x * (y*8+b) + l) % levels]) << b
+
                     # v |= (p[(x*5 + 3*(y*8+b)*48 + l) % levels]) << b
                 data.append(v)
     return data
