@@ -64,6 +64,8 @@ void LcdInitialise(void)
 
 void setup()
 {
+  pinMode(D2, INPUT_PULLUP);
+
   LcdInitialise();
 
   Serial.begin(115200);
@@ -106,9 +108,16 @@ void send_bitmap()
   digitalWrite(PIN_DC, LCD_D);
   digitalWrite(PIN_SCE, LOW);
 
-  for(int i = 0; i < g_bitmap_len; ++i)
+  for(int i = 0; i < g_bitmap_len; i += 504)
   {
-    shiftOut(PIN_SDIN, PIN_SCLK, MSBFIRST, g_bitmap[i]);
+    for(int j = 0; j < 504; ++j)
+    {
+      shiftOut(PIN_SDIN, PIN_SCLK, MSBFIRST, g_bitmap[i+j]);
+    }
+    if (digitalRead(D2) == LOW)
+    {
+      delay(500);
+    }
   }
 
   digitalWrite(PIN_SCE, HIGH);
