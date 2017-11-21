@@ -26,6 +26,7 @@ import random
 import numpy
 import math
 from PIL import Image
+from PIL import ImageEnhance
 
 
 def quantize(img, levels, floydsteinberg):
@@ -136,6 +137,8 @@ def parse_args():
                         help='Use Floyd-Steinberg dithering')
     parser.add_argument('-m', '--magic', metavar="X,Y", type=MagicValue, default=None,
                         help='Magic values to determine the flicker pattern')
+    parser.add_argument('-e', '--enhance', metavar="B,C", type=BrightnessContrastValue, default=None,
+                        help='Adjust brightness and contrast before sending the image')
     return parser.parse_args()
 
 
@@ -154,6 +157,10 @@ def main():
 
     img = Image.open(args.FILE[0])
     img = img2grayscale(img, args.rotate)
+
+    if args.enhance is not None:
+        img = ImageEnhance.Brightness(img).enhance(args.enhance[0])
+        img = ImageEnhance.Contrast(img).enhance(args.enhance[1])
 
     data = img2data(img, args.levels, args.dither, magic)
 
