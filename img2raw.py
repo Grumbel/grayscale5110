@@ -87,6 +87,7 @@ def img2data(img, levels, dither, magic):
                 data.append(v)
     return data
 
+float_re = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 
 def img2grayscale(img, rotate):
     if img.size != (84, 48):
@@ -106,11 +107,20 @@ def img2grayscale(img, rotate):
 
 
 def MagicValue(text):
-    m = re.match(r"(\d+),(\d+)", text)
+    m = re.match(r"({}),({})".format(float_re, float_re), text)
     if m is None:
         raise argparse.ArgumentTypeError("invalid format for --magic: '{}', expected \"X,Y\"".format(args.format))
     else:
-        return (int(m.group(1)), int(m.group(2)))
+        return (float(m.group(1)), float(m.group(2)))
+
+
+def BrightnessContrastValue(text):
+    m = re.match(r"({}),({})".format(float_re, float_re), text)
+    if m is None:
+        raise argparse.ArgumentTypeError("invalid format for --enhance: '{}', expected \"BRIGHTNESS,CONTRAST\"".format(args.format))
+    else:
+        return (float(m.group(1)), float(m.group(2)))
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Convert image to raw bitmap data')
@@ -133,7 +143,9 @@ def main():
     args = parse_args()
 
     if args.magic is None:
-        if args.levels > 9:
+        if args.levels > 15:
+            magic = (7, 5)
+        elif args.levels > 9:
             magic = (5, 3)
         else:
             magic = (1, 1)
