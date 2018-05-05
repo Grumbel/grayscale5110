@@ -108,7 +108,7 @@ void send_bitmap()
   digitalWrite(PIN_DC, LCD_D);
   digitalWrite(PIN_SCE, LOW);
 
-  for(int i = 0; i < g_bitmap_len; i += 504)
+  for(size_t i = 0; i < g_bitmap_len; i += 504)
   {
     for(int j = 0; j < 504; ++j)
     {
