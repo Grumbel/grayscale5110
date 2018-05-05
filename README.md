@@ -9,5 +9,5 @@ microcontroller.
 Usage
 -----
 
-    ./img2raw.py monolisa.png | nc 192.168.178.78 8080
+    ./img2raw.py monalisa.png | nc 192.168.178.78 8080
 
